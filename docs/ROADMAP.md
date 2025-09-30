@@ -1,11 +1,11 @@
-# ROADMAP ¿ DogFS
+# ROADMAP - DogFS
 
 This roadmap defines the phases for building DogFS:
 a distributed file system inspired by HDFS, using Raft for metadata consistency
 
 ---
 
-## Phase 1 ¿ Local Prototype
+## Phase 1 - Local Prototype
 
 ### Goal
 
@@ -22,12 +22,12 @@ a distributed file system inspired by HDFS, using Raft for metadata consistency
 ### Acceptance Criteria
 
 - Upload and download work end-to-end
-- Metadata correctly maps objectName ¿ shard list
-- Deleting a shard still allows reconstruction if ¿k shards exist
+- Metadata correctly maps objectName - shard list
+- Deleting a shard still allows reconstruction if -k shards exist
 
 ---
 
-## Phase 2 ¿ Multi-node Chunk Servers
+## Phase 2 - Multi-node Chunk Servers
 
 ### Goal
 
@@ -43,13 +43,13 @@ a distributed file system inspired by HDFS, using Raft for metadata consistency
 
 ### Acceptance Criteria
 
-- Upload places shards across ¿3 chunk servers
-- Download works as long as ¿k chunk servers respond
+- Upload places shards across -3 chunk servers
+- Download works as long as -k chunk servers respond
 - Killing a chunk server does not break file reads
 
 ---
 
-## Phase 3 ¿ Raft Metadata Cluster
+## Phase 3 - Raft Metadata Cluster
 
 ### Goal
 
@@ -61,7 +61,7 @@ a distributed file system inspired by HDFS, using Raft for metadata consistency
 - Metadata replicated across 3 Raft nodes
 - Leader election and log replication
 - Clients discover leader to perform metadata operations
-- Metadata stores file namespace and block ¿ chunk server mapping
+- Metadata stores file namespace and block - chunk server mapping
 
 ### Acceptance Criteria
 
@@ -72,7 +72,7 @@ a distributed file system inspired by HDFS, using Raft for metadata consistency
 
 ---
 
-## Phase 4 ¿ Scaling & Enhancements
+## Phase 4 - Scaling & Enhancements
 
 ### Goal
 

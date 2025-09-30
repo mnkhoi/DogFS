@@ -20,7 +20,7 @@ For project milestones, see [ROADMAP.md](docs/ROADMAP.md)
 ### 1. Metadata Raft Cluster
 
 - Stores filesystem namespace: directories, files, and block mapping
-- Stores block → chunk server mapping
+- Stores block -> chunk server mapping
 - Strong consistency via Raft
 - Leader election for fault tolerance
 - Handles file creation, deletion, and block placement decisions
@@ -44,15 +44,15 @@ For project milestones, see [ROADMAP.md](docs/ROADMAP.md)
 
 ### File Write
 
-1. Client → Metadata leader: request file creation
-2. Metadata leader → Raft cluster: commit metadata entry
+1. Client -> Metadata leader: request file creation
+2. Metadata leader -> Raft cluster: commit metadata entry
 3. Metadata returns block IDs + chunk server assignments
 4. Client uploads blocks to chunk servers in parallel
-5. Chunk servers acknowledge uploads → metadata leader commits completion
+5. Chunk servers acknowledge uploads -> metadata leader commits completion
 
 ### File Read
 
-1. Client → Metadata leader: request file metadata
+1. Client -> Metadata leader: request file metadata
 2. Metadata returns block locations
 3. Client downloads blocks from chunk servers and reconstructs file
 
