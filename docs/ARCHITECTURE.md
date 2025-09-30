@@ -1,82 +1,89 @@
-# DogFS - Architecture
+# DogFS Architecture – HDFS-like with Raft Metadata
 
 ## Overview
 
-This project is a learning-focused distributed object store
+DogFS is a learning-focused distributed file system inspired by HDFS but enhanced with **Raft consensus for metadata**
+This design removes the NameNode single point of failure while retaining strong consistency for metadata
 
-- Data (objects) is split into erasure-coded shards and distributed across chunk servers
-- Metadata (object -> shard mapping) is managed by a Raft cluster for strong consistency
+DogFS uses:
 
-The system prioritizes **Availability (A)** and **Partition tolerance (P)** at the data layer, but uses **Consistency (C)** for metadata to simplify correctness
+- **Raft consensus** for metadata
+- **Erasure coding** for efficient, fault-tolerant block storage
+- **Separated metadata and chunk servers**
+
+For project milestones, see [ROADMAP.md](docs/ROADMAP.md)
 
 ---
 
 ## Components
 
-### Metadata Service
+### 1. Metadata Raft Cluster
 
-- Runs as a Raft cluster (3 nodes)
-- Stores mappings: `objectName -> [shardID, nodeID]`
-- Strongly consistent (linearizable)
-- Sharded for scalability (via hash partitioning)
+- Stores filesystem namespace: directories, files, and block mapping
+- Stores block → chunk server mapping
+- Strong consistency via Raft
+- Leader election for fault tolerance
+- Handles file creation, deletion, and block placement decisions
 
-### Chunk Servers
+### 2. Chunk Servers
 
-- Store shards as flat files on local disk
-- Expose gRPC interface: `PutShard`, `GetShard`
-- Stateless beyond their local storage
-- Can be replaced/repaired without cluster-wide impact
+- Store fixed-size blocks (e.g., 64 MB)
+- Use erasure coding for durability
+- Serve block read/write requests from clients
+- Send heartbeat messages to metadata cluster
 
-### Client
+### 3. Client
 
-- Talks to metadata leader to resolve shard locations
-- Upload path:
-  1 Contact metadata leader
-  2 Encode file -> shards
-  3 Upload shards to chunk servers
-  4 Update metadata via Raft
-- Download path:
-  1 Contact metadata leader
-  2 Fetch shards directly from chunk servers
-  3 Decode file
+- Discovers Raft leader metadata node
+- Requests metadata for files
+- Uploads/downloads blocks directly to/from chunk servers
 
 ---
 
-## Tradeoffs
+## Data Flow
 
-### Why Raft for Metadata?
+### File Write
 
-- **Pros:** Simpler semantics, no conflicts, correctness easy to reason about
-- **Cons:** Sacrifices availability of metadata if quorum lost
+1. Client → Metadata leader: request file creation
+2. Metadata leader → Raft cluster: commit metadata entry
+3. Metadata returns block IDs + chunk server assignments
+4. Client uploads blocks to chunk servers in parallel
+5. Chunk servers acknowledge uploads → metadata leader commits completion
 
-### Why Erasure Coding over Replication?
+### File Read
 
-- **Pros:** Lower storage overhead (eg, 4+2 scheme = 15x vs 3x replication)
-- **Cons:** More CPU/network overhead on encode/decode
-- **Cons:** Repair traffic is heavier than simple re-replication
-
-### Why Separate Metadata and Chunk Servers?
-
-- **Pros:** Metadata stays small, fast, strongly consistent
-- **Pros:** Chunk servers can scale independently
-- **Cons:** Extra RPC hops (client must contact metadata then chunks)
-
-### Why gRPC?
-
-- **Pros:** Type-safe, good tooling in Go, streaming support
-- **Cons:** Slightly more complex setup vs REST
-
-### CAP Theorem Position
-
-- **Metadata:** CP (Consistency + Partition tolerance)
-- **Data (chunks):** AP (Availability + Partition tolerance) with erasure coding
-- This hybrid model mirrors real-world designs (eg, HDFS, Ceph)
+1. Client → Metadata leader: request file metadata
+2. Metadata returns block locations
+3. Client downloads blocks from chunk servers and reconstructs file
 
 ---
 
-## Future Stretch Goals
+## Trade-offs
 
-- Background shard repair
-- Object listing across shards
-- Security (TLS + auth)
-- Automatic rebalancing when adding/removing nodes
+### Metadata
+
+- **Consistency**: Strong (Raft consensus)
+- **Availability**: Limited by Raft quorum requirements
+- **Partition tolerance**: Raft tolerates partitions with leader election
+
+### Data Layer
+
+- **Consistency**: Eventual for block content (erasure coding + quorum reads)
+- **Availability**: High — data available as long as k of k+m shards exist
+- **Partition tolerance**: High
+
+---
+
+## CAP Theorem Position
+
+- **Metadata layer**: CP (Consistency + Partition tolerance)
+- **Data layer**: AP (Availability + Partition tolerance)
+
+---
+
+## Future Enhancements
+
+- Namespace sharding for scaling metadata
+- Background repair of lost shards
+- Automatic rebalancing of blocks
+- Security (TLS, authentication)
